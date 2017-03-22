@@ -5,6 +5,7 @@ cf install-plugin IBM-Containers -r Bluemix
 cf ic init
 name=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 16 | head -n 1)
 cf ic namespace set $name
+name=$(cf ic namespace get)
 cf ic init
 cf ic login
 cf ic images
