@@ -2,7 +2,9 @@
 set -x
 cf install-plugin https://static-ice.ng.bluemix.net/ibm-containers-linux_x64
 cf ic init
-cf ic namespace set gitlab
+name=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+cf ic namespace set $name
+cf ic init
 cf ic login
 cf ic images
 cf ic build -t registry.ng.bluemix.net/<namespace>/gitlab-postgres containers/postgresql/.
