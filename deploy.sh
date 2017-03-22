@@ -1,4 +1,6 @@
 #!/bin/bash
+set -x
+cf install-plugin https://static-ice.ng.bluemix.net/ibm-containers-linux_x64
 cf ic init
 cf ic namespace set gitlab
 cf ic login
@@ -15,4 +17,4 @@ cf ic run -d --name redis --volume redis:/var/lib/redis registry.ng.bluemix.net/
 cf ic run -d --volume gitlab:/home/git/data --link pgsql:postgresql --link redis:redis --publish 10022:22 --publish 10080:80 gitlab
 cf ic ip request
 cf ic ip list
-cf ic ip bind <unbound IP from above> <gitlab container ID>
+cf ic ip bind 10022:22 10080:80 
