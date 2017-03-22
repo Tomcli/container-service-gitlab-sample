@@ -11,6 +11,7 @@ cf ic images
 cf ic build -t registry.ng.bluemix.net/$name/gitlab-postgres containers/postgresql/.
 cf ic build -t registry.ng.bluemix.net/$name/gitlab containers/gitlab/.
 cf ic cpi redis:alpine registry.ng.bluemix.net/$name/redis
+sleep 5m
 cf ic volume create postgresql
 cf ic volume create redis
 cf ic volume create gitlab
@@ -20,4 +21,5 @@ cf ic run -d --name redis --volume redis:/var/lib/redis registry.ng.bluemix.net/
 cf ic run -d --volume gitlab:/home/git/data --link pgsql:postgresql --link redis:redis --publish 10022:22 --publish 10080:80 gitlab
 cf ic ip request
 cf ic ip list
-cf ic ip bind 10022:22 10080:80 
+ip=$(cf ic ip list | grep -v "Number" | grep -v "Listing" | grep -v "IP")
+cf ic ip bind $ip
