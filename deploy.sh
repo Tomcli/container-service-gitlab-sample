@@ -1,6 +1,7 @@
 #!/bin/bash
 set -x
-cf install-plugin https://static-ice.ng.bluemix.net/ibm-containers-linux_x64
+cf add-plugin-repo bluemix http://plugins.ng.bluemix.net/
+cf install-plugin IBM-Containers -r Bluemix
 cf ic init
 name=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 16 | head -n 1)
 cf ic namespace set $name
