@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/IBM/container-service-gitlab-sample.svg?branch=master)](https://travis-ci.org/IBM/container-service-gitlab-sample)
 
+[![Deploy to Bluemix](https://bluemix.net/deploy/button.png)](https://bluemix.net/deploy?repository=https://github.com/tomcli/container-service-gitlab-sample)
+
 # GitLab deployment on Bluemix Container Service
 
 ## Overview

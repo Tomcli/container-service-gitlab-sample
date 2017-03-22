@@ -1,0 +1,630 @@
+---
+stages:
+- name: Build Stage
+  inputs:
+  - type: git
+    branch: master
+  triggers:
+  - type: commit
+  jobs:
+  - name: Build
+    type: builder
+    artifact_dir: ''
+- name: Build Postgres
+  inputs:
+  - type: git
+    branch: master
+  triggers:
+  - type: stage
+  jobs:
+  - name: Build
+    type: builder
+    extension_id: ibm.devops.services.pipeline.container.builder
+    target:
+      url: https://api.ng.bluemix.net
+      organization: ${CF_ORGANIZATION}
+      space: ${CF_SPACE}
+    IMAGE_NAME: gitlab-postgres
+    USE_CACHED_LAYERS: 'true'
+    COMMAND: "#!/bin/bash\n# The following colors have been defined to help with presentation\
+      \ of logs: green, red, label_color, no_color.  \nlog_and_echo \"$LABEL\" \"\
+      Starting build script\"\ncd containers/postgres/\n# The IBM Container BM Containers\
+      \ plug-in (cf ic), Git client (git), and IDS Inventory CLI (ids-inv) have been\
+      \ installed.\n# Based on the organization and space selected in the Job credentials\
+      \ are in place for both IBM Container Service and IBM Bluemix \n#####################\n\
+      # Run unit tests    #\n#####################\nlog_and_echo \"$LABEL\" \"No unit\
+      \ tests cases have been checked in\"\n\n######################################\n\
+      # Build Container via Dockerfile     #\n######################################\n\
+      \n# REGISTRY_URL=${CCS_REGISTRY_HOST}/${NAMESPACE}\n# FULL_REPOSITORY_NAME=${REGISTRY_URL}/${IMAGE_NAME}:${APPLICATION_VERSION}\n\
+      # If you wish to receive slack notifications, set SLACK_WEBHOOK_PATH as a property\
+      \ on the stage.\n\nif [ -f Dockerfile ]; then \n    log_and_echo \"$LABEL\"\
+      \ \"Building ${FULL_REPOSITORY_NAME}\"\n    ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l info -m \"New container build requested for ${FULL_REPOSITORY_NAME}\"\n\
+      \    # build image\n    BUILD_COMMAND=\"\"\n    if [ \"${USE_CACHED_LAYERS}\"\
+      \ == \"true\" ]; then \n        BUILD_COMMAND=\"build --pull --tag ${FULL_REPOSITORY_NAME}\
+      \ ${WORKSPACE}/containers/postgres/\"\n        ice_retry ${BUILD_COMMAND}\n\
+      \        RESULT=$?\n    else \n        BUILD_COMMAND=\"build --no-cache --tag\
+      \ ${FULL_REPOSITORY_NAME} ${WORKSPACE}/containers/postgres/\"\n        ice_retry\
+      \ ${BUILD_COMMAND}\n        RESULT=$?\n    fi \n\n    if [ $RESULT -ne 0 ];\
+      \ then\n        log_and_echo \"$ERROR\" \"Error building image\"\n        ice_retry\
+      \ info \n        ice_retry images\n        ${EXT_DIR}/print_help.sh\n      \
+      \  ${EXT_DIR}/utilities/sendMessage.sh -l bad -m \"Container build of ${FULL_REPOSITORY_NAME}\
+      \ failed. $(get_error_info)\"\n        exit 1\n    else\n        log_and_echo\
+      \ \"$SUCCESSFUL\" \"Container build of ${FULL_REPOSITORY_NAME} was successful\"\
+      \n        ${EXT_DIR}/utilities/sendMessage.sh -l good -m \"Container build of\
+      \ ${FULL_REPOSITORY_NAME} was successful\"\n    fi  \nelse \n    log_and_echo\
+      \ \"$ERROR\" \"Dockerfile not found in project\"\n    ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l bad -m \"Failed to get Dockerfile. $(get_error_info)\"\n    exit 1\nfi\
+      \  \n\n######################################################################################\n\
+      # Copy any artifacts that will be needed for deployment and testing to $WORKSPACE\
+      \    #\n######################################################################################\n\
+      echo \"IMAGE_NAME=${FULL_REPOSITORY_NAME}\" >> $ARCHIVE_DIR/build.properties"
+- name: Build Gitlab
+  inputs:
+  - type: git
+    branch: master
+  triggers:
+  - type: stage
+  jobs:
+  - name: Build
+    type: builder
+    extension_id: ibm.devops.services.pipeline.container.builder
+    target:
+      url: https://api.ng.bluemix.net
+      organization: ${CF_ORGANIZATION}
+      space: ${CF_SPACE}
+    IMAGE_NAME: gitlab
+    USE_CACHED_LAYERS: 'true'
+    COMMAND: "#!/bin/bash\n# The following colors have been defined to help with presentation\
+      \ of logs: green, red, label_color, no_color.  \nlog_and_echo \"$LABEL\" \"\
+      Starting build script\"\ncd containers/gitlab/\n# The IBM Container BM Containers\
+      \ plug-in (cf ic), Git client (git), and IDS Inventory CLI (ids-inv) have been\
+      \ installed.\n# Based on the organization and space selected in the Job credentials\
+      \ are in place for both IBM Container Service and IBM Bluemix \n#####################\n\
+      # Run unit tests    #\n#####################\nlog_and_echo \"$LABEL\" \"No unit\
+      \ tests cases have been checked in\"\n\n######################################\n\
+      # Build Container via Dockerfile     #\n######################################\n\
+      \n# REGISTRY_URL=${CCS_REGISTRY_HOST}/${NAMESPACE}\n# FULL_REPOSITORY_NAME=${REGISTRY_URL}/${IMAGE_NAME}:${APPLICATION_VERSION}\n\
+      # If you wish to receive slack notifications, set SLACK_WEBHOOK_PATH as a property\
+      \ on the stage.\n\nif [ -f Dockerfile ]; then \n    log_and_echo \"$LABEL\"\
+      \ \"Building ${FULL_REPOSITORY_NAME}\"\n    ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l info -m \"New container build requested for ${FULL_REPOSITORY_NAME}\"\n\
+      \    # build image\n    BUILD_COMMAND=\"\"\n    if [ \"${USE_CACHED_LAYERS}\"\
+      \ == \"true\" ]; then \n        BUILD_COMMAND=\"build --pull --tag ${FULL_REPOSITORY_NAME}\
+      \ ${WORKSPACE}/containers/gitlab/\"\n        ice_retry ${BUILD_COMMAND}\n  \
+      \      RESULT=$?\n    else \n        BUILD_COMMAND=\"build --no-cache --tag\
+      \ ${FULL_REPOSITORY_NAME} ${WORKSPACE}/containers/gitlab/\"\n        ice_retry\
+      \ ${BUILD_COMMAND}\n        RESULT=$?\n    fi \n\n    if [ $RESULT -ne 0 ];\
+      \ then\n        log_and_echo \"$ERROR\" \"Error building image\"\n        ice_retry\
+      \ info \n        ice_retry images\n        ${EXT_DIR}/print_help.sh\n      \
+      \  ${EXT_DIR}/utilities/sendMessage.sh -l bad -m \"Container build of ${FULL_REPOSITORY_NAME}\
+      \ failed. $(get_error_info)\"\n        exit 1\n    else\n        log_and_echo\
+      \ \"$SUCCESSFUL\" \"Container build of ${FULL_REPOSITORY_NAME} was successful\"\
+      \n        ${EXT_DIR}/utilities/sendMessage.sh -l good -m \"Container build of\
+      \ ${FULL_REPOSITORY_NAME} was successful\"\n    fi  \nelse \n    log_and_echo\
+      \ \"$ERROR\" \"Dockerfile not found in project\"\n    ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l bad -m \"Failed to get Dockerfile. $(get_error_info)\"\n    exit 1\nfi\
+      \  \n\n######################################################################################\n\
+      # Copy any artifacts that will be needed for deployment and testing to $WORKSPACE\
+      \    #\n######################################################################################\n\
+      echo \"IMAGE_NAME=${FULL_REPOSITORY_NAME}\" >> $ARCHIVE_DIR/build.properties"
+- name: Build redis
+  inputs:
+  - type: git
+    branch: master
+  triggers:
+  - type: stage
+  jobs:
+  - name: Build
+    type: builder
+    extension_id: ibm.devops.services.pipeline.container.builder
+    target:
+      url: https://api.ng.bluemix.net
+      organization: ${CF_ORGANIZATION}
+      space: ${CF_SPACE}
+    IMAGE_NAME: redis
+    USE_CACHED_LAYERS: 'true'
+    COMMAND: "#!/bin/bash\n# The following colors have been defined to help with presentation\
+      \ of logs: green, red, label_color, no_color.  \nlog_and_echo \"$LABEL\" \"\
+      Starting build script\"\n\n# The IBM Container BM Containers plug-in (cf ic),\
+      \ Git client (git), and IDS Inventory CLI (ids-inv) have been installed.\n#\
+      \ Based on the organization and space selected in the Job credentials are in\
+      \ place for both IBM Container Service and IBM Bluemix \n#####################\n\
+      # Run unit tests    #\n#####################\nlog_and_echo \"$LABEL\" \"No unit\
+      \ tests cases have been checked in\"\n\n######################################\n\
+      # Build Container via Dockerfile     #\n######################################\n\
+      \n# REGISTRY_URL=${CCS_REGISTRY_HOST}/${NAMESPACE}\n# FULL_REPOSITORY_NAME=${REGISTRY_URL}/${IMAGE_NAME}:${APPLICATION_VERSION}\n\
+      # If you wish to receive slack notifications, set SLACK_WEBHOOK_PATH as a property\
+      \ on the stage.\n\ncf ic cpi redis:alpine ${FULL_REPOSITORY_NAME}\n\necho \"\
+      IMAGE_NAME=${FULL_REPOSITORY_NAME}\" >> $ARCHIVE_DIR/build.properties"
+- name: Deploy
+  inputs:
+  - type: job
+    stage: Build Postgres
+    job: Build
+  triggers:
+  - type: stage
+  jobs:
+  - name: Deploy
+    type: deployer
+    extension_id: ibm.devops.services.pipeline.docker.deploy.ice
+    target:
+      url: https://api.ng.bluemix.net
+      organization: ${CF_ORGANIZATION}
+      space: ${CF_SPACE}
+    PORT: '80'
+    OPTIONAL_ARGS: --volume postgresql:/var/lib/postgresql
+    DEPLOY_TYPE: red_black
+    CONTAINER_NAME: pgsql
+    COMMAND: "#!/bin/bash\n# The following are some example deployment scripts.  Use\
+      \ these as is or fork them and include your updates here:\necho -e \"${label_color}Starting\
+      \ deployment script${no_color}\"\ncf ic volume create postgresql\n# To view/fork\
+      \ this script goto: https://github.com/Osthanes/deployscripts\n# git_retry will\
+      \ retry git calls to prevent pipeline failure on temporary github problems\n\
+      # the code can be found in git_util.sh at https://github.com/Osthanes/container_deployer\n\
+      git_retry clone https://github.com/Osthanes/deployscripts.git deployscripts\n\
+      \n\n# You can deploy your Image as either a single Container or as a Container\
+      \ \n# Group.  A Container Group deploys a number of containers to enhance\n\
+      # scalability or reliability.  By default we will deploy as a single \n# container.\
+      \  To switch to a group deploy, comment out the line below\n# containing deploycontainer.sh\
+      \ and uncomment the line for deploygroup.sh\n\n# Deploy with containers:\n#\
+      \ Optional environment properties (can be set directly in this script, or defined\
+      \ as environment properties):\n#      NAME              Value         Description\n\
+      #   =============      =========     ==============\n#   BIND_TO           \
+      \  String       Specify a Bluemix application name that whose bound services\
+      \ you wish to make available to the container.  By default this is not set.\n\
+      #   CONTAINER_SIZE      String       Specify container size: pico (64), nano\
+      \ (128), micro (256), tiny (512), small (1024), medium (2048),\n#          \
+      \                                                  large (4096), x-large (8192),\
+      \ 2x-large (16384).\n#                                    Default is micro (256).\n\
+      #   CONCURRENT_VERSIONS Number       Number of versions of this container to\
+      \ leave active.  \n#                                    Default is 1\n#\n/bin/bash\
+      \ deployscripts/deploycontainer.sh\n\n# Deploy Container Group:\n# Optional\
+      \ environment properties (can be set directly in this script, or defined as\
+      \ environment properties):\n#      NAME              Value         Description\n\
+      #   =============      =========     ==============\n#   ROUTE_HOSTNAME    \
+      \  String       Specify the Hostname for the Cloud Foundry Route you wish to\
+      \ assign to this container group.  By default this is not set.\n#   ROUTE_DOMAIN\
+      \        String       Specify domain name for the Cloud Foundry Route you wish\
+      \ to assign to this container group.  By default this is not set.\n#   BIND_TO\
+      \             String       Specify a Bluemix application name that whose bound\
+      \ services you wish to make available to the container.  By default this is\
+      \ not set.\n#   DESIRED_INSTANCES:  Number       Specify the number of instances\
+      \ in the group.  Default value is 1.\n#   AUTO_RECOVERY:      Boolean      Set\
+      \ auto-recovery to true/false.  Default value is false.\n\n#               \
+      \                     Default is false.\n#   CONTAINER_SIZE      String    \
+      \   Specify container size: pico (64), nano (128), micro (256), tiny (512),\
+      \ small (1024), medium (2048),\n#                                          \
+      \                  large (4096), x-large (8192), 2x-large (16384).\n#      \
+      \                              Default is micro (256).\n#   CONCURRENT_VERSIONS\
+      \ Number       Number of versions of this group to leave active.\n#        \
+      \                            Default is 1\n# IF YOU WANT CONTAINER GROUPS ..\
+      \ uncomment the next line, and comment out the previous deployment line (/bin/bash\
+      \ deployscripts/deploygroup.sh)\n#/bin/bash deployscripts/deploygroup.sh\n\n\
+      RESULT=$?\n\n# source the deploy property file\nif [ -f \"${DEPLOY_PROPERTY_FILE}\"\
+      \ ]; then\n  source \"$DEPLOY_PROPERTY_FILE\"\nfi\n\n#########################\n\
+      # Environment DETAILS   #\n#########################\n# The environment has\
+      \ been setup.\n# The Cloud Foundry CLI (cf), IBM Container Service CLI (ice),\
+      \ Git client (git), IDS Inventory CLI (ids-inv) and Python 2.7.3 (python) have\
+      \ been installed.\n# Based on the organization and space selected in the Job\
+      \ credentials are in place for both IBM Container Service and IBM Bluemix\n\n\
+      # The following colors have been defined to help with presentation of logs:\
+      \ green, red, label_color, no_color.\nif [ $RESULT -ne 0 ]; then\n    echo -e\
+      \ \"${red}Executed failed or had warnings ${no_color}\"\n    ${EXT_DIR}/print_help.sh\n\
+      \    exit $RESULT\nfi\necho -e \"${green}Execution complete${no_label}\""
+- name: Deploy redis
+  inputs:
+  - type: job
+    stage: Build redis
+    job: Build
+  triggers:
+  - type: stage
+  jobs:
+  - name: Deploy
+    type: deployer
+    extension_id: ibm.devops.services.pipeline.docker.deploy.ice
+    target:
+      url: https://api.ng.bluemix.net
+      organization: ${CF_ORGANIZATION}
+      space: ${CF_SPACE}
+    PORT: '80'
+    OPTIONAL_ARGS: --volume redis:/var/lib/redis
+    DEPLOY_TYPE: red_black
+    CONTAINER_NAME: redis
+    COMMAND: "#!/bin/bash\n# The following are some example deployment scripts.  Use\
+      \ these as is or fork them and include your updates here:\necho -e \"${label_color}Starting\
+      \ deployment script${no_color}\"\ncf ic volume create redis\n# To view/fork\
+      \ this script goto: https://github.com/Osthanes/deployscripts\n# git_retry will\
+      \ retry git calls to prevent pipeline failure on temporary github problems\n\
+      # the code can be found in git_util.sh at https://github.com/Osthanes/container_deployer\n\
+      git_retry clone https://github.com/Osthanes/deployscripts.git deployscripts\n\
+      \n\n# You can deploy your Image as either a single Container or as a Container\
+      \ \n# Group.  A Container Group deploys a number of containers to enhance\n\
+      # scalability or reliability.  By default we will deploy as a single \n# container.\
+      \  To switch to a group deploy, comment out the line below\n# containing deploycontainer.sh\
+      \ and uncomment the line for deploygroup.sh\n\n# Deploy with containers:\n#\
+      \ Optional environment properties (can be set directly in this script, or defined\
+      \ as environment properties):\n#      NAME              Value         Description\n\
+      #   =============      =========     ==============\n#   BIND_TO           \
+      \  String       Specify a Bluemix application name that whose bound services\
+      \ you wish to make available to the container.  By default this is not set.\n\
+      #   CONTAINER_SIZE      String       Specify container size: pico (64), nano\
+      \ (128), micro (256), tiny (512), small (1024), medium (2048),\n#          \
+      \                                                  large (4096), x-large (8192),\
+      \ 2x-large (16384).\n#                                    Default is micro (256).\n\
+      #   CONCURRENT_VERSIONS Number       Number of versions of this container to\
+      \ leave active.  \n#                                    Default is 1\n#\n/bin/bash\
+      \ deployscripts/deploycontainer.sh\n\n# Deploy Container Group:\n# Optional\
+      \ environment properties (can be set directly in this script, or defined as\
+      \ environment properties):\n#      NAME              Value         Description\n\
+      #   =============      =========     ==============\n#   ROUTE_HOSTNAME    \
+      \  String       Specify the Hostname for the Cloud Foundry Route you wish to\
+      \ assign to this container group.  By default this is not set.\n#   ROUTE_DOMAIN\
+      \        String       Specify domain name for the Cloud Foundry Route you wish\
+      \ to assign to this container group.  By default this is not set.\n#   BIND_TO\
+      \             String       Specify a Bluemix application name that whose bound\
+      \ services you wish to make available to the container.  By default this is\
+      \ not set.\n#   DESIRED_INSTANCES:  Number       Specify the number of instances\
+      \ in the group.  Default value is 1.\n#   AUTO_RECOVERY:      Boolean      Set\
+      \ auto-recovery to true/false.  Default value is false.\n\n#               \
+      \                     Default is false.\n#   CONTAINER_SIZE      String    \
+      \   Specify container size: pico (64), nano (128), micro (256), tiny (512),\
+      \ small (1024), medium (2048),\n#                                          \
+      \                  large (4096), x-large (8192), 2x-large (16384).\n#      \
+      \                              Default is micro (256).\n#   CONCURRENT_VERSIONS\
+      \ Number       Number of versions of this group to leave active.\n#        \
+      \                            Default is 1\n# IF YOU WANT CONTAINER GROUPS ..\
+      \ uncomment the next line, and comment out the previous deployment line (/bin/bash\
+      \ deployscripts/deploygroup.sh)\n#/bin/bash deployscripts/deploygroup.sh\n\n\
+      RESULT=$?\n\n# source the deploy property file\nif [ -f \"${DEPLOY_PROPERTY_FILE}\"\
+      \ ]; then\n  source \"$DEPLOY_PROPERTY_FILE\"\nfi\n\n#########################\n\
+      # Environment DETAILS   #\n#########################\n# The environment has\
+      \ been setup.\n# The Cloud Foundry CLI (cf), IBM Container Service CLI (ice),\
+      \ Git client (git), IDS Inventory CLI (ids-inv) and Python 2.7.3 (python) have\
+      \ been installed.\n# Based on the organization and space selected in the Job\
+      \ credentials are in place for both IBM Container Service and IBM Bluemix\n\n\
+      # The following colors have been defined to help with presentation of logs:\
+      \ green, red, label_color, no_color.\nif [ $RESULT -ne 0 ]; then\n    echo -e\
+      \ \"${red}Executed failed or had warnings ${no_color}\"\n    ${EXT_DIR}/print_help.sh\n\
+      \    exit $RESULT\nfi\necho -e \"${green}Execution complete${no_label}\""
+- name: Deploy gitlab
+  inputs:
+  - type: job
+    stage: Build Gitlab
+    job: Build
+  triggers:
+  - type: stage
+  jobs:
+  - name: Deploy
+    type: deployer
+    extension_id: ibm.devops.services.pipeline.docker.deploy.ice
+    target:
+      url: https://api.ng.bluemix.net
+      organization: ${CF_ORGANIZATION}
+      space: ${CF_SPACE}
+    PORT: 80,22
+    OPTIONAL_ARGS: --volume gitlab:/home/git/data --publish 10022:22 --publish 10080:80
+    DEPLOY_TYPE: red_black
+    CONTAINER_NAME: gitlab
+    COMMAND: "#!/bin/bash\n# The following are some example deployment scripts.  Use\
+      \ these as is or fork them and include your updates here:\necho -e \"${label_color}Starting\
+      \ deployment script${no_color}\"\n\ncf ic volume create gitlab\nPOSTGRESQL_NAME=$(cf\
+      \ ic ps | grep \"pgsql\" | rev | awk '{print $1}' | rev)\necho ${POSTGRESQL_NAME}\n\
+      REDISNAME=$(cf ic ps | grep \"redis\" | rev | awk '{print $1}' | rev)\necho\
+      \ ${REDISNAME}\n\n# To view/fork this script goto: https://github.com/Osthanes/deployscripts\n\
+      # git_retry will retry git calls to prevent pipeline failure on temporary github\
+      \ problems\n# the code can be found in git_util.sh at https://github.com/Osthanes/container_deployer\n\
+      git_retry clone https://github.com/Osthanes/deployscripts.git deployscripts\n\
+      \n\n# You can deploy your Image as either a single Container or as a Container\
+      \ \n# Group.  A Container Group deploys a number of containers to enhance\n\
+      # scalability or reliability.  By default we will deploy as a single \n# container.\
+      \  To switch to a group deploy, comment out the line below\n# containing deploycontainer.sh\
+      \ and uncomment the line for deploygroup.sh\n\n# Deploy with containers:\n#\
+      \ Optional environment properties (can be set directly in this script, or defined\
+      \ as environment properties):\n#      NAME              Value         Description\n\
+      #   =============      =========     ==============\n#   BIND_TO           \
+      \  String       Specify a Bluemix application name that whose bound services\
+      \ you wish to make available to the container.  By default this is not set.\n\
+      #   CONTAINER_SIZE      String       Specify container size: pico (64), nano\
+      \ (128), micro (256), tiny (512), small (1024), medium (2048),\n#          \
+      \                                                  large (4096), x-large (8192),\
+      \ 2x-large (16384).\n#                                    Default is micro (256).\n\
+      #   CONCURRENT_VERSIONS Number       Number of versions of this container to\
+      \ leave active.  \n#                                    Default is 1\n#\n#!/bin/bash\n\
+      \n#********************************************************************************\n\
+      # Copyright 2014 IBM\n#\n#   Licensed under the Apache License, Version 2.0\
+      \ (the \"License\");\n#   you may not use this file except in compliance with\
+      \ the License.\n#   You may obtain a copy of the License at\n#\n#     http://www.apache.org/licenses/LICENSE-2.0\n\
+      #\n#   Unless required by applicable law or agreed to in writing, software\n\
+      #   distributed under the License is distributed on an \"AS IS\" BASIS,\n# \
+      \  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n\
+      #   See the License for the specific language governing permissions and\n#********************************************************************************\n\
+      ls\n\n# load helper functions\nsource deployscripts/deploy_utilities.sh\n\n\
+      insert_inventory(){\n    update_inventory $1 $2 \"insert\"\n}\ndelete_inventory(){\n\
+      \    update_inventory $1 $2 \"delete\"\n}\n\n# function to wait for a container\
+      \ to start\n# takes a container name as the only parameter\nwait_for (){\n \
+      \   local WAITING_FOR=$1\n    if [ -z ${WAITING_FOR} ]; then\n        log_and_echo\
+      \ \"$ERROR\" \"Expected container name to be passed into wait_for\"\n      \
+      \  return 1\n    fi\n    local COUNTER=0\n    local STATE=\"unknown\"\n    while\
+      \ [[ ( $COUNTER -lt 180 ) && (\"${STATE}\" != \"Running\") && (\"${STATE}\"\
+      \ != \"Crashed\") ]]; do\n        let COUNTER=COUNTER+1\n        STATE=$($IC_COMMAND\
+      \ inspect $WAITING_FOR 2> /dev/null | grep \"Status\" | awk '{print $2}' | sed\
+      \ 's/\"//g')\n        if [ -z \"${STATE}\" ]; then\n            STATE=\"being\
+      \ placed\"\n        fi\n        log_and_echo \"${WAITING_FOR} is ${STATE}\"\n\
+      \        sleep 3\n    done\n    if [ \"$STATE\" == \"Crashed\" ]; then\n   \
+      \     return 2\n    fi\n    if [ \"$STATE\" != \"Running\" ]; then\n       \
+      \ log_and_echo \"$ERROR\" \"Failed to start instance \"\n        return 1\n\
+      \    fi\n    return 0\n}\n\n# function to wait for a container to start\n# takes\
+      \ a container name as the only parameter\nwait_for_stopped (){\n    local WAITING_FOR=$1\n\
+      \    if [ -z ${WAITING_FOR} ]; then\n        log_and_echo \"$ERROR\" \"Expected\
+      \ container name to be passed into wait_for\"\n        return 1\n    fi\n  \
+      \  local COUNTER=0\n    local FOUND=0\n    while [[ ( $COUNTER -lt 60 ) && (\"\
+      ${STATE}\" != \"Shutdown\")  ]]; do\n        let COUNTER=COUNTER+1\n       \
+      \ STATE=$($IC_COMMAND inspect $WAITING_FOR 2> /dev/null | grep \"Status\" |\
+      \ awk '{print $2}' | sed 's/\"//g')\n        if [ -z \"${STATE}\" ]; then\n\
+      \            STATE=\"being deleted\"\n        fi\n        sleep 2\n    done\n\
+      \    if [ \"$STATE\" != \"Shutdown\" ]; then\n        log_and_echo \"$ERROR\"\
+      \ \"Failed to stop instance $WAITING_FOR \"\n        return 1\n    else\n  \
+      \      log_and_echo \"Successfully stopped $WAITING_FOR\"\n    fi\n    return\
+      \ 0\n}\n\ndeploy_container() {\n    local MY_CONTAINER_NAME=$1\n    log_and_echo\
+      \ \"deploying container ${MY_CONTAINER_NAME}\"\n\n    if [ -z MY_CONTAINER_NAME\
+      \ ];then\n        log_and_echo \"$ERROR\" \"No container name was provided\"\
+      \n        return 1\n    fi\n\n    # check to see if that container name is already\
+      \ in use\n    $IC_COMMAND inspect ${MY_CONTAINER_NAME} > /dev/null\n    local\
+      \ FOUND=$?\n    if [ ${FOUND} -eq 0 ]; then\n        log_and_echo \"$ERROR\"\
+      \ \"${MY_CONTAINER_NAME} already exists.  Please remove these containers or\
+      \ change the Name of the container or group being deployed\"\n    fi\n\n   \
+      \ # check to see if container image is exisit \n    check_image \"$IMAGE_NAME\"\
+      \n    local RESULT=$?\n    if [ $RESULT -ne 0 ]; then\n        log_and_echo\
+      \ \"$ERROR\" \"Image '${IMAGE_NAME}' does not exist.\"\n        $IC_COMMAND\
+      \ images\n        return 1\n    fi\n\n    local BIND_PARMS=\"\"\n    # validate\
+      \ the bind_to parameter if one was passed\n    if [ ! -z \"${BIND_TO}\" ]; then\n\
+      \        log_and_echo \"Binding to ${BIND_TO}\"\n        local APP=$(cf env\
+      \ ${BIND_TO})\n        local APP_FOUND=$?\n        if [ $APP_FOUND -ne 0 ];\
+      \ then\n            log_and_echo \"$ERROR\" \"${BIND_TO} application not found\
+      \ in space.  Please confirm that you wish to bind the container to the application,\
+      \ and that the application exists\"\n        fi\n        local VCAP_SERVICES=$(echo\
+      \ \"${APP}\" | grep \"VCAP_SERVICES\")\n        local SERVICES_BOUND=$?\n  \
+      \      if [ $SERVICES_BOUND -ne 0 ]; then\n            log_and_echo \"$WARN\"\
+      \ \"No services appear to be bound to ${BIND_TO}.  Please confirm that you have\
+      \ bound the intended services to the application.\"\n        fi\n        if\
+      \ [ \"$USE_ICE_CLI\" = \"1\" ]; then\n            BIND_PARMS=\"--bind ${BIND_TO}\"\
+      \n        else\n            BIND_PARMS=\"-e CCS_BIND_APP=${BIND_TO}\"\n    \
+      \    fi\n    fi\n    # run the container and check the results\n    log_and_echo\
+      \ \"run the container: $IC_COMMAND run --name ${MY_CONTAINER_NAME} ${PUBLISH_PORT}\
+      \ ${MEMORY} ${OPTIONAL_ARGS} ${BIND_PARMS} ${IMAGE_NAME} \"\n    ice_retry run\
+      \ --name ${MY_CONTAINER_NAME} --link ${POSTGRESQL_NAME}:postgresql --link ${REDISNAME}:redis\
+      \ ${PUBLISH_PORT} ${MEMORY} ${OPTIONAL_ARGS} ${BIND_PARMS} ${IMAGE_NAME} 2>\
+      \ /dev/null\n    RESULT=$?\n    if [ $RESULT -ne 0 ]; then\n        log_and_echo\
+      \ \"$ERROR\" \"Failed to deploy ${MY_CONTAINER_NAME} using ${IMAGE_NAME}\"\n\
+      \        dump_info\n        return 1\n    fi\n\n    # wait for container to\
+      \ start\n    wait_for ${MY_CONTAINER_NAME}\n    RESULT=$?\n    if [ $RESULT\
+      \ -eq 0 ]; then\n        insert_inventory \"ibm_containers\" ${MY_CONTAINER_NAME}\n\
+      \    elif [ $RESULT -eq 2 ]; then\n        log_and_echo \"$ERROR\" \"Container\
+      \ instance crashed.\"\n        log_and_echo \"$WARN\" \"The container was removed\
+      \ successfully.\"\n        ice_retry rm ${MY_CONTAINER_NAME} 2> /dev/null\n\
+      \        if [ $? -ne 0 ]; then\n            log_and_echo \"$WARN\" \"'$IC_COMMAND\
+      \ rm ${MY_CONTAINER_NAME}' command failed with return code ${RESULT}\"\n   \
+      \         log_and_echo \"$WARN\" \"Removing Container instance ${MY_CONTAINER_NAME}\
+      \ is not completed\"\n        fi\n        print_fail_msg \"ibm_containers\"\n\
+      \    fi\n    return ${RESULT}\n}\n\ndeploy_simple () {\n    local MY_CONTAINER_NAME=\"\
+      ${CONTAINER_NAME}_${BUILD_NUMBER}\"\n    deploy_container ${MY_CONTAINER_NAME}\n\
+      \    local RESULT=$?\n    if [ $RESULT -ne 0 ]; then\n        log_and_echo \"\
+      $ERROR\" \"Error encountered with simple build strategy for ${CONTAINER_NAME}_${BUILD_NUMBER}\"\
+      \n        ${EXT_DIR}/utilities/sendMessage.sh -l bad -m \"Failed deployment\
+      \ of ${MY_CONTAINER_NAME}. $(get_error_info)\"\n        exit $RESULT\n    fi\n\
+      }\n\ndeploy_red_black () {\n    log_and_echo \"$LABEL\" \"Example red_black\
+      \ container deploy \"\n    # deploy new version of the application\n    local\
+      \ MY_CONTAINER_NAME=\"${CONTAINER_NAME}_${BUILD_NUMBER}\"\n    local FLOATING_IP=\"\
+      \"\n    local IP_JUST_FOUND=\"\"\n    deploy_container ${MY_CONTAINER_NAME}\n\
+      \    local RESULT=$?\n    if [ $RESULT -ne 0 ]; then\n        ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l bad -m \"Failed deployment of ${MY_CONTAINER_NAME}. $(get_error_info)\"\
+      \n        exit $RESULT\n    fi\n\n    # Cleaning up previous deployments. \"\
+      \n    clean\n    RESULT=$?\n    if [ $RESULT -ne 0 ]; then\n        ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l bad -m \"Failed to cleanup previous deployments after deployment of ${MY_CONTAINER_NAME}.\
+      \ $(get_error_info)\"\n        exit $RESULT\n    fi\n    # if we alredy discoved\
+      \ the floating IP in clean(), then we assign it to FLOATING_IP.\n    if [ -n\
+      \ \"${DISCOVERED_FLOATING_IP}\" ]; then\n        FLOATING_IP=$DISCOVERED_FLOATING_IP\n\
+      \    fi\n\n    # check to see that I obtained a floating IP address\n    #ice\
+      \ inspect ${CONTAINER_NAME}_${BUILD_NUMBER} > inspect.log\n    #FLOATING_IP=$(cat\
+      \ inspect.log | grep \"PublicIpAddress\" | awk '{print $2}')\n    if [ \"${FLOATING_IP}\"\
+      \ = '\"\"' ] || [ -z \"${FLOATING_IP}\" ]; then\n        log_and_echo \"Check\
+      \ for the free IP, will attempt to reuse existing IP\"\n        ice_retry_save_output\
+      \ ip list 2> /dev/null\n        FLOATING_IP=$(grep -E '[0-9]{1,3}\\.[0-9]{1,3}\\\
+      .[0-9]{1,3}\\.[0-9]{1,3}[[:space:]]*$' iceretry.log | head -n 1)\n        #strip\
+      \ off whitespace\n        FLOATING_IP=${FLOATING_IP// /}\n        if [ -z \"\
+      ${FLOATING_IP}\" ];then\n            log_and_echo \"No any free IP address found.\
+      \ Requesting new IP\"\n            ice_retry_save_output ip request 2> /dev/null\n\
+      \            FLOATING_IP=$(awk '{print $4}' iceretry.log | grep -E '[0-9]{1,3}\\\
+      .[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}')\n            RESULT=$?\n           \
+      \ if [ $RESULT -ne 0 ]; then\n                cat iceretry.log\n           \
+      \     log_and_echo \"$ERROR\" \"Could not request a new, or reuse an existing\
+      \ IP address \"\n                dump_info\n                ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l bad -m \"Failed deployment of ${MY_CONTAINER_NAME}.  Unable to allocate\
+      \ IP address. $(get_error_info)\"\n                exit 1\n            else\n\
+      \                # strip off junk\n                temp=\"${FLOATING_IP%\\\"\
+      }\"\n                FLOATING_IP=\"${temp#\\\"}\"\n                log_and_echo\
+      \ \"Assign new IP address $FLOATING_IP\"\n            fi\n        else\n   \
+      \         log_and_echo \"Reuse an existing IP address $FLOATING_IP\"\n     \
+      \   fi\n        ice_retry ip bind ${FLOATING_IP} ${CONTAINER_NAME}_${BUILD_NUMBER}\
+      \ 2> /dev/null\n        RESULT=$?\n        if [ $RESULT -ne 0 ]; then\n    \
+      \        cat iceretry.log\n            log_and_echo \"$ERROR\" \"Failed to bind\
+      \ ${FLOATING_IP} to ${CONTAINER_NAME}_${BUILD_NUMBER} \"\n            log_and_echo\
+      \ \"Unsetting TEST_URL\"\n            export TEST_URL=\"\"\n            dump_info\n\
+      \            ${EXT_DIR}/utilities/sendMessage.sh -l bad -m \"Failed binding\
+      \ of IP address to ${MY_CONTAINER_NAME}. $(get_error_info)\"\n            exit\
+      \ 1\n        fi\n    fi\n    TEST_URL=\"${URL_PROTOCOL}${FLOATING_IP}:$(echo\
+      \ $PORT | sed 's/,/ /g' |  awk '{print $1;}')\"\n    log_and_echo \"Exporting\
+      \ TEST_URL:${TEST_URL}\"\n    if [ ! -z ${DEPLOY_PROPERTY_FILE} ]; then\n  \
+      \      echo \"export TEST_URL=\"${TEST_URL}\"\" >> \"${DEPLOY_PROPERTY_FILE}\"\
+      \n        echo \"export TEST_IP=\"${FLOATING_IP}\"\" >> \"${DEPLOY_PROPERTY_FILE}\"\
+      \n        echo \"export TEST_PORT=\"$(echo $PORT | sed 's/,/ /g' |  awk '{print\
+      \ $1;}')\"\" >> \"${DEPLOY_PROPERTY_FILE}\"\n    fi\n \n    log_and_echo \"\
+      ${green}Public IP address of ${CONTAINER_NAME}_${BUILD_NUMBER} is ${FLOATING_IP}\
+      \ and the TEST_URL is ${TEST_URL} ${no_color}\"\n}\n\nclean() {\n    log_and_echo\
+      \ \"Cleaning up previous deployments.  Will keep ${CONCURRENT_VERSIONS} versions\
+      \ active.\"\n    local RESULT=0\n    local FIND_PREVIOUS=\"false\"\n    local\
+      \ FLOATING_IP=\"\"\n    local IP_JUST_FOUND=\"\"\n    local containerName=\"\
+      \"\n    # if we have a requested floating ip, try to use that one instead of\
+      \ any other\n    if [ -n \"${REQUESTED_FLOATING_IP}\" ]; then\n        # make\
+      \ sure we own this ip\n        ice_retry_save_output ip list 2> /dev/null\n\
+      \        RESULT=$?\n        if [ $RESULT -ne 0 ]; then \n            log_and_echo\
+      \ \"$ERROR\" \"'$IC_COMMAND ip list' command failed with return code ${RESULT}\"\
+      \n            log_and_echo \"$ERROR\" \"The requested ip will not be used\"\n\
+      \        else\n            local find_requested_ip=$(grep \"\\<${REQUESTED_FLOATING_IP}\\\
+      >\" iceretry.log)\n            if [ -z \"${find_requested_ip}\" ]; then\n  \
+      \              log_and_echo \"$ERROR\" \"Requested ip ${REQUESTED_FLOATING_IP}\
+      \ is not assigned to this org and space and cannot be used.\"\n            else\n\
+      \                # is it already in use\n                local old_bound_container=$(echo\
+      \ \"${find_requested_ip}\" | awk '{print $2}')\n                if [ -n \"${old_bound_container}\"\
+      \ ]; then\n                    # unbind it from the old one first\n        \
+      \            ice_retry ip unbind ${REQUESTED_FLOATING_IP} ${old_bound_container}\
+      \ 2> /dev/null\n                    RESULT=$?\n                    if [ $RESULT\
+      \ -ne 0 ]; then\n                        log_and_echo \"$ERROR\" \"'$IC_COMMAND\
+      \ ip unbind ${REQUESTED_FLOATING_IP} ${old_bound_container}' command failed\
+      \ with return code ${RESULT}\"\n                    else\n                 \
+      \       log_and_echo \"Requested ip ${REQUESTED_FLOATING_IP} was successfully\
+      \ unbound from previous container ${old_bound_container}\"\n               \
+      \     fi\n                    # sleep to let it take effect\n              \
+      \      sleep 2\n                fi\n                # bind it to our new container\n\
+      \                ice_retry ip bind ${REQUESTED_FLOATING_IP} ${CONTAINER_NAME}_${BUILD_NUMBER}\
+      \ 2> /dev/null\n                RESULT=$?\n                if [ $RESULT -ne\
+      \ 0 ]; then\n                    log_and_echo \"$ERROR\" \"'$IC_COMMAND ip bind\
+      \ ${REQUESTED_FLOATING_IP} ${CONTAINER_NAME}_${BUILD_NUMBER}' command failed\
+      \ with return code ${RESULT}\"\n                else\n                    #\
+      \ save that it worked, so we don't try to reclaim a different one\n        \
+      \            FLOATING_IP=${REQUESTED_FLOATING_IP}\n                    log_and_echo\
+      \ \"Requested ip ${FLOATING_IP} was successfully bound to ${CONTAINER_NAME}_${BUILD_NUMBER}\"\
+      \n                fi\n            fi\n        fi\n    fi\n    # add the container\
+      \ name that need to keep in an array\n    for (( i = 0 ; i < $CONCURRENT_VERSIONS\
+      \ ; i++ ))\n    do\n        KEEP_BUILD_NUMBERS[$i]=\"${CONTAINER_NAME}_$(($BUILD_NUMBER-$i))\"\
+      \n    done\n    # add the current containers in an array of the container name\n\
+      \    if [ \"$USE_ICE_CLI\" = \"1\" ]; then\n        ice_retry_save_output ps\
+      \ -q -a 2> /dev/null\n    else\n        ice_retry_save_output ps -a 2> /dev/null\n\
+      \    fi   \n    RESULT=$?\n    if [ $RESULT -ne 0 ]; then\n        log_and_echo\
+      \ \"$WARN\" \"'$IC_COMMAND ps -q' command failed with return code ${RESULT}\"\
+      \n        log_and_echo \"$DEBUGGING\" `cat iceretry.log`\n        log_and_echo\
+      \ \"$WARN\" \"Cleaning up previous deployments is not completed\"\n        return\
+      \ 0\n    else\n        if [ \"$USE_ICE_CLI\" = \"1\" ]; then\n            local\
+      \ CONTAINER_NAME_ARRAY=$(grep ${CONTAINER_NAME} iceretry.log | awk '{print $2}')\n\
+      \        else\n            local CONTAINER_NAME_ARRAY=$(grep -oh -e \"${CONTAINER_NAME}_[0-9]\\\
+      +\" iceretry.log)\n        fi   \n    fi\n    # loop through the array of the\
+      \ container name and check which one it need to keep\n    for containerName\
+      \ in ${CONTAINER_NAME_ARRAY[@]}\n    do\n        CONTAINER_VERSION_NUMBER=$(echo\
+      \ $containerName | sed 's#.*_##g')\n        if [ $CONTAINER_VERSION_NUMBER -le\
+      \ $BUILD_NUMBER ]; then\n            ice_retry_save_output inspect ${containerName}\
+      \ 2> /dev/null\n            RESULT=$?\n            if [ $RESULT -eq 0 ]; then\n\
+      \                log_and_echo \"Found container ${containerName}\"\n       \
+      \         # does it have a public IP address\n                if [ -z \"${FLOATING_IP}\"\
+      \ ]; then\n                    if [ \"$USE_ICE_CLI\" != \"1\" ] && [ $CONTAINER_VERSION_NUMBER\
+      \ -eq $BUILD_NUMBER ]; then\n                        log_and_echo \"Did not\
+      \ search for previous IP because the container build number $CONTAINER_VERSION_NUMBER\
+      \ is the current build number\"\n                    else\n                \
+      \        FLOATING_IP=$(grep \"PublicIpAddress\" iceretry.log | awk '{print $2}')\n\
+      \                        temp=\"${FLOATING_IP%\\\"}\"\n                    \
+      \    FLOATING_IP=\"${temp#\\\"}\"\n                        if [ -n \"${FLOATING_IP}\"\
+      \ ]; then\n                           log_and_echo \"Discovered previous IP\
+      \ ${FLOATING_IP}\"\n                           IP_JUST_FOUND=$FLOATING_IP\n\
+      \                        fi\n                    fi\n                else\n\
+      \                    log_and_echo \"Did not search for previous IP because we\
+      \ have already discovered $FLOATING_IP\"\n                fi\n            fi\n\
+      \            if [[ \"$containerName\" != *\"$BUILD_NUMBER\"* ]]; then\n    \
+      \            # this is a previous deployment\n                if [ -z \"${FLOATING_IP}\"\
+      \ ]; then\n                    log_and_echo \"${containerName} did not have\
+      \ a floating IP so will need to discover one from previous deployment or allocate\
+      \ one\"\n                elif [ -n \"${IP_JUST_FOUND}\" ]; then\n          \
+      \          log_and_echo \"${containerName} had a floating ip ${FLOATING_IP}\"\
+      \n                    ice_retry ip unbind ${FLOATING_IP} ${containerName} 2>\
+      \ /dev/null\n                    RESULT=$?\n                    if [ $RESULT\
+      \ -ne 0 ]; then\n                        log_and_echo \"$WARN\" \"'$IC_COMMAND\
+      \ ip unbind ${FLOATING_IP} ${containerName}' command failed with return code\
+      \ ${RESULT}\"\n                        log_and_echo \"$WARN\" \"Cleaning up\
+      \ previous deployments is not completed\"\n                        return 0\n\
+      \                    fi   \n                    sleep 2                    \n\
+      \                    ice_retry ip bind ${FLOATING_IP} ${CONTAINER_NAME}_${BUILD_NUMBER}\
+      \ 2> /dev/null\n                    RESULT=$?\n                    if [ $RESULT\
+      \ -ne 0 ]; then\n                        log_and_echo \"$WARN\" \"'$IC_COMMAND\
+      \ ip bind ${FLOATING_IP} ${CONTAINER_NAME}_${BUILD_NUMBER}' command failed with\
+      \ return code ${RESULT}\"\n                        log_and_echo \"$WARN\" \"\
+      Cleaning up previous deployments is not completed\"\n                      \
+      \  return 0\n                    fi\n                fi\n            fi\n  \
+      \      fi\n        if [ $CONTAINER_VERSION_NUMBER -gt $BUILD_NUMBER ]; then\n\
+      \            log_and_echo \"$WARN\" \"The container ${containerName} version\
+      \ is greater then the current build number ${BUILD_NUMBER} and it will not be\
+      \ removed.\"\n            log_and_echo \"$WARN\" \"You may remove it with the\
+      \ $IC_COMMAND cli command '$IC_COMMAND rm -f ${containerName}'\"\n        elif\
+      \ [[ \" ${KEEP_BUILD_NUMBERS[*]} \" == *\" ${containerName} \"* ]]; then\n \
+      \           # this is the concurrent version so keep it around\n           \
+      \ log_and_echo \"keeping deployment: ${containerName}\"\n        else\n    \
+      \        log_and_echo \"delete inventory: ${containerName}\"\n            delete_inventory\
+      \ \"ibm_containers\" ${containerName}\n            log_and_echo \"removing previous\
+      \ deployment: ${containerName}\"\n            ice_retry rm -f ${containerName}\
+      \ 2> /dev/null\n            RESULT=$?\n            if [ $RESULT -ne 0 ]; then\n\
+      \                log_and_echo \"$WARN\" \"'$IC_COMMAND rm -f ${containerName}'\
+      \ command failed with return code ${RESULT}\"\n                log_and_echo\
+      \ \"$WARN\" \"Cleaning up previous deployments is not completed\"\n        \
+      \        return 0\n            fi\n            FIND_PREVIOUS=\"true\"\n    \
+      \    fi\n        IP_JUST_FOUND=\"\"\n    done\n    if [ FIND_PREVIOUS=\"false\"\
+      \ ]; then\n        log_and_echo \"No previous deployments found to clean up\"\
+      \n    else\n        log_and_echo \"Cleaned up previous deployments\"\n    fi\n\
+      \    if [ -n \"${FLOATING_IP}\" ]; then\n       log_and_echo \"Discovered previous\
+      \ IP ${FLOATING_IP}\"\n       export DISCOVERED_FLOATING_IP=$FLOATING_IP\n \
+      \   else\n       export DISCOVERED_FLOATING_IP=\"\"\n    fi\n    return 0\n\
+      }\n##################\n# Initialization #\n##################\n# Check to see\
+      \ what deployment type:\n#   simple: simply deploy a container and set the inventory\n\
+      #   red_black: deploy new container, assign floating IP address, keep original\
+      \ container\nif [ -z \"$URL_PROTOCOL\" ]; then\n export URL_PROTOCOL=\"http://\"\
+      \nfi\n\n# set the port numbers with --publish\nif [ -z \"$PORT\" ]; then\n \
+      \   export PUBLISH_PORT=\"--publish 80\"\nelse\n    export PUBLISH_PORT=$(get_port_numbers\
+      \ \"${PORT}\")\nfi\n\nif [ ! -z ${DEPLOY_PROPERTY_FILE} ]; then\n    echo \"\
+      export SINGLE_CONTAINER_NAME=\"${CONTAINER_NAME}_${BUILD_NUMBER}\"\" >> \"${DEPLOY_PROPERTY_FILE}\"\
+      \nfi\n\n# set the memory size\nif [ -z \"$CONTAINER_SIZE\" ];then\n    export\
+      \ MEMORY=\"\"\nelse\n    RET_MEMORY=$(get_memory_size $CONTAINER_SIZE)\n   \
+      \ if [ $RET_MEMORY == -1 ]; then\n        ${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l bad -m \"Failed with container size ${CONTAINER_SIZE}. $(get_error_info)\"\
+      \n        exit 1;\n    else\n        export MEMORY=\"--memory $RET_MEMORY\"\n\
+      \    fi\nfi\n\n# set current version\nif [ -z \"$CONCURRENT_VERSIONS\" ];then\n\
+      \    export CONCURRENT_VERSIONS=1\nfi\n\nlog_and_echo \"$LABEL\" \"Deploying\
+      \ using ${DEPLOY_TYPE} strategy, for ${CONTAINER_NAME}, deploy number ${BUILD_NUMBER}\"\
+      \n${EXT_DIR}/utilities/sendMessage.sh -l info -m \"New ${DEPLOY_TYPE} container\
+      \ deployment for ${CONTAINER_NAME} requested\"\n\nif [ \"${DEPLOY_TYPE}\" ==\
+      \ \"red_black\" ]; then\n    deploy_red_black\nelif [ \"${DEPLOY_TYPE}\" ==\
+      \ \"simple\" ]; then\n    deploy_simple\nelif [ \"${DEPLOY_TYPE}\" == \"clean\"\
+      \ ]; then\n    clean\nelse\n    log_and_echo \"$WARN\" \"Currently only supporting\
+      \ red_black deployment strategy\"\n    log_and_echo \"$WARN\" \"If you would\
+      \ like another strategy please fork https://github.com/Osthanes/deployscripts.git\
+      \ and submit a pull request\"\n    log_and_echo \"$WARN\" \"Defaulting to red_black\
+      \ deploy\"\n    deploy_red_black\nfi\ndump_info\n${EXT_DIR}/utilities/sendMessage.sh\
+      \ -l good -m \"Sucessful deployment of ${CONTAINER_NAME}\"\n\n\n# Deploy Container\
+      \ Group:\n# Optional environment properties (can be set directly in this script,\
+      \ or defined as environment properties):\n#      NAME              Value   \
+      \      Description\n#   =============      =========     ==============\n# \
+      \  ROUTE_HOSTNAME      String       Specify the Hostname for the Cloud Foundry\
+      \ Route you wish to assign to this container group.  By default this is not\
+      \ set.\n#   ROUTE_DOMAIN        String       Specify domain name for the Cloud\
+      \ Foundry Route you wish to assign to this container group.  By default this\
+      \ is not set.\n#   BIND_TO             String       Specify a Bluemix application\
+      \ name that whose bound services you wish to make available to the container.\
+      \  By default this is not set.\n#   DESIRED_INSTANCES:  Number       Specify\
+      \ the number of instances in the group.  Default value is 1.\n#   AUTO_RECOVERY:\
+      \      Boolean      Set auto-recovery to true/false.  Default value is false.\n\
+      \n#                                    Default is false.\n#   CONTAINER_SIZE\
+      \      String       Specify container size: pico (64), nano (128), micro (256),\
+      \ tiny (512), small (1024), medium (2048),\n#                              \
+      \                              large (4096), x-large (8192), 2x-large (16384).\n\
+      #                                    Default is micro (256).\n#   CONCURRENT_VERSIONS\
+      \ Number       Number of versions of this group to leave active.\n#        \
+      \                            Default is 1\n# IF YOU WANT CONTAINER GROUPS ..\
+      \ uncomment the next line, and comment out the previous deployment line (/bin/bash\
+      \ deployscripts/deploygroup.sh)\n#/bin/bash deployscripts/deploygroup.sh\n\n\
+      RESULT=$?\n\n# source the deploy property file\nif [ -f \"${DEPLOY_PROPERTY_FILE}\"\
+      \ ]; then\n  source \"$DEPLOY_PROPERTY_FILE\"\nfi\n\n#########################\n\
+      # Environment DETAILS   #\n#########################\n# The environment has\
+      \ been setup.\n# The Cloud Foundry CLI (cf), IBM Container Service CLI (ice),\
+      \ Git client (git), IDS Inventory CLI (ids-inv) and Python 2.7.3 (python) have\
+      \ been installed.\n# Based on the organization and space selected in the Job\
+      \ credentials are in place for both IBM Container Service and IBM Bluemix\n\n\
+      # The following colors have been defined to help with presentation of logs:\
+      \ green, red, label_color, no_color.\nif [ $RESULT -ne 0 ]; then\n    echo -e\
+      \ \"${red}Executed failed or had warnings ${no_color}\"\n    ${EXT_DIR}/print_help.sh\n\
+      \    exit $RESULT\nfi\necho -e \"${green}Execution complete${no_label}\""
